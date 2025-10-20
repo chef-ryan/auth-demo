@@ -35,6 +35,23 @@ type CurrentUserResponse = {
   sessionId: string;
 };
 
+type PositionsResponse = {
+  positions: Array<{
+    market: string;
+    side: string;
+    size: number;
+    valueUSD: number;
+  }>;
+  user: {
+    address: string;
+    profile: {
+      username: string;
+      displayName: string;
+      bio: string;
+    };
+  };
+};
+
 const call = async <TResponse = unknown>(
   method: string,
   path: string,
@@ -135,5 +152,24 @@ describe("authentication flow", () => {
       session.token
     );
     expect(response.status).toBe(401);
+  });
+
+  it("returns the user profile alongside positions when authenticated", async () => {
+    const session = await login();
+
+    const { response, data } = await call<PositionsResponse>(
+      "GET",
+      "/positions",
+      undefined,
+      session.token
+    );
+
+    expect(response.status).toBe(200);
+    expect(Array.isArray(data.positions)).toBe(true);
+    expect(data.user.address).toBe(testAccount.address);
+    expect(data.user.profile.username).toContain("user-");
+
+    const unauthorized = await call<ErrorResponse>("GET", "/positions");
+    expect(unauthorized.response.status).toBe(401);
   });
 });
