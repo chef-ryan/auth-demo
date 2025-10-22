@@ -1,6 +1,6 @@
-import { requireSession } from "../domain/auth/requireSession";
+import { JWTAuth } from "./jwtAuth";
 import { getProfile } from "../domain/users/getProfile";
-import type { SessionClaims, SessionContext } from "../domain/auth/types";
+import type { SessionContext } from "./jwt.types";
 
 type UserProfile = ReturnType<typeof getProfile>;
 
@@ -11,14 +11,11 @@ export type SessionWithProfile = {
 
 export const withSession = () =>
   async (context: unknown): Promise<SessionWithProfile> => {
-    const { request, jwt } = context as {
+    const { request } = context as {
       request: Request;
-      jwt: {
-        verify: (token: string) => Promise<SessionClaims | false>;
-      };
     };
 
-    const session = await requireSession(request, jwt);
+    const session = await JWTAuth.getInstance().requireSession(request);
     return {
       session,
       userProfile: getProfile(session),

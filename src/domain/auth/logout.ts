@@ -1,12 +1,12 @@
 import { authLogger } from "../../services/logger";
-import { sessionStore } from "../../services/sessionStore";
+import { sessionStore } from "../../jwt/sessionStore";
 import { nowSeconds } from "../time";
-import type { SessionContext } from "./types";
+import type { SessionContext } from "../../jwt/jwt.types";
 
-export const logout = ({ claims }: SessionContext) => {
+export const logout = async ({ claims }: SessionContext) => {
   const expiresAtMs = (claims.exp ?? nowSeconds()) * 1000;
 
-  sessionStore.revoke(claims.sessionId, expiresAtMs);
+  await sessionStore.revoke(claims.sessionId, expiresAtMs);
   authLogger.info({
     type: "logout",
     address: claims.address,

@@ -1,4 +1,4 @@
-import type { SessionContext } from "../auth/types";
+import type { SessionContext } from "../../jwt/jwt.types";
 
 export const getProfile = ({ claims }: SessionContext) => ({
   address: claims.address,

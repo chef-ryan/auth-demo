@@ -9,9 +9,6 @@ export class HttpError extends Error {
   }
 }
 
-export const unauthorized = (message: string, code?: number) =>
-  new HttpError(401, message, code);
-
 export const badRequest = (message: string, code?: number) =>
   new HttpError(400, message, code);
 

@@ -1,6 +1,5 @@
 import { Elysia, t } from "elysia"
 import { cors } from "@elysiajs/cors"
-import { jwt } from "@elysiajs/jwt"
 import { HttpError } from "./errors"
 import { getLoginMessage } from "./domain/auth/getLoginMessage"
 import { login } from "./domain/auth/login"
@@ -8,26 +7,13 @@ import { logout } from "./domain/auth/logout"
 import { getCurrentUser } from "./domain/users/getCurrentUser"
 import { getPositions } from "./domain/users/getPositions"
 import { getActivity } from "./domain/activity/getActivity"
-import { getEnv } from "./utils/env"
-import { withSession } from "./middleware/withSession"
+import { withSession } from "./jwt/withSession"
+import { JWTAuth } from "./jwt/jwtAuth"
 
 export const buildApp = () => {
-  const jwtSecret = getEnv("JWT_SECRET")
-  const sessionClaimsSchema = t.Object({
-    address: t.String(),
-    sessionId: t.String(),
-    loginAt: t.String(),
-  })
-
   const app = new Elysia({ name: "l3auth-demo" })
     .use(cors())
-    .use(
-      jwt({
-        name: "jwt",
-        secret: jwtSecret,
-        schema: sessionClaimsSchema,
-      })
-    )
+    .use(JWTAuth.getInstance().jwtPlugin())
     .onError(({ error, set }) => {
       if (error instanceof HttpError) {
         set.status = error.status
@@ -49,7 +35,7 @@ export const buildApp = () => {
 
   app.get("/auth/message", () => getLoginMessage())
 
-  app.post("/auth/login", async ({ body, jwt }) => login(body, jwt), {
+  app.post("/auth/login", async ({ body }) => login(body), {
     body: t.Object({
       address: t.String({
         error: "wallet address is required",
@@ -67,7 +53,7 @@ export const buildApp = () => {
   app.use(
     new Elysia({ name: "protected-routes" })
       .derive(withSession())
-      .post("/auth/logout", ({ session }) => logout(session))
+      .post("/auth/logout", async ({ session }) => logout(session))
       .get("/users/me", ({ session }) => getCurrentUser(session))
       .get("/profiles", ({ userProfile }) => userProfile)
       .get("/positions", ({ userProfile }) => ({
