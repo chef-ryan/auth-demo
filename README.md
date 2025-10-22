@@ -33,7 +33,7 @@ On start, the server listens on `http://localhost:${PORT}`.
 2. Wallet signs that message (L1 verification step).
 3. Client sends `{ address, message, signature }` to `POST /auth/login`.
 4. Backend verifies the signature, issues a JWT containing `address`, `loginAt`, `sessionId`, and `exp`.
-5. Client includes `Authorization: Bearer <token>` on L3-protected routes.
+5. Client includes `Authorization: Bearer <token>` on L3-protected routes, or sends the token as a `l3auth_token` cookie (configurable via `SESSION_COOKIE_NAME`).
 
 Tokens expire after 24h by default. When a token expires, the client should request a new one via `POST /auth/login`. `POST /auth/logout` revokes the active session immediately.
 

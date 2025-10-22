@@ -14,11 +14,37 @@ export type LoginResult = {
 
 const DEFAULT_TOKEN_TTL_SECONDS = 60 * 60 * 24
 
+const SESSION_COOKIE_NAME = "jwt_token"
+
 const bearerToken = (authorization?: string | null) => {
   if (!authorization) return null
   const [scheme, value] = authorization.split(" ")
   if (scheme?.toLowerCase() !== "bearer" || !value) return null
   return value.trim()
+}
+
+const cookieToken = (cookieHeader?: string | null) => {
+  if (!cookieHeader) return null
+
+  for (const cookie of cookieHeader.split(";")) {
+    const [rawName, ...rest] = cookie.split("=")
+    if (!rawName || rest.length === 0) continue
+
+    const name = rawName.trim().toLowerCase()
+    if (name !== SESSION_COOKIE_NAME) continue
+
+    const rawValue = rest.join("=").trim()
+    if (!rawValue) continue
+
+    const value = rawValue.replace(/^"|"$/g, "")
+    try {
+      return decodeURIComponent(value)
+    } catch {
+      return value
+    }
+  }
+
+  return null
 }
 
 export class JWTAuth {
@@ -82,10 +108,12 @@ export class JWTAuth {
 
   async requireSession(request: Request): Promise<SessionContext> {
     await sessionStore.purgeExpired()
-    const token = bearerToken(request.headers.get("authorization"))
+    const token =
+      bearerToken(request.headers.get("authorization")) ??
+      cookieToken(request.headers.get("cookie"))
 
     if (!token) {
-      throw unauthorized("Missing Authorization header")
+      throw unauthorized("Missing session token")
     }
 
     const claims = (await this.plugin.decorator.jwt.verify(token)) as
