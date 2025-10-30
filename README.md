@@ -1,6 +1,6 @@
 # L3 Auth Demo
 
-This project demonstrates a session-based L3 authentication workflow using [Elysia](https://elysiajs.com/) on Bun. It simulates the Polymarket-style wallet login flow, issues HMAC-SHA256 JWTs after an L1 signature check, and protects a small set of low-privilege endpoints with the resulting session token.
+This project demonstrates a CAIP-10 compliant L3 authentication workflow using [Elysia](https://elysiajs.com/) on Bun. Wallets sign a one-time challenge, the backend verifies the signature, and an HTTP-only `l3-session` cookie is issued while the full session is stored server-side (Redis or an in-memory fallback).
 
 ## Prerequisites
 
@@ -8,13 +8,10 @@ This project demonstrates a session-based L3 authentication workflow using [Elys
 - A `.env` file based on `.env.example`
 
 ```ini
-JWT_SECRET=replace-with-strong-secret
 PORT=3000
+# Optional
+REDIS_URL=redis://localhost:6379
 ```
-
-Optional overrides:
-
-- `TOKEN_TTL_SECONDS` (default `86400`)
 
 ## Install & Run
 
@@ -29,26 +26,34 @@ On start, the server listens on `http://localhost:${PORT}`.
 
 ## Auth Flow
 
-1. Client fetches the predetermined login statement from `GET /auth/message`.
-2. Wallet signs that message (L1 verification step).
-3. Client sends `{ address, message, signature }` to `POST /auth/login`.
-4. Backend verifies the signature, issues a JWT containing `address`, `loginAt`, `sessionId`, and `exp`.
-5. Client includes `Authorization: Bearer <token>` on L3-protected routes, or sends the token as a `l3auth_token` cookie (configurable via `SESSION_COOKIE_NAME`).
+1. Client requests a nonce from `GET /auth/nonce`, which returns a unique `nonce` and `issuedAt`.
+2. Client builds the canonical message locally using the template:<br/>
+   `prob.market wants you to sign in with your account: {identity.account}`<br/>
+   `domain: prob.market`<br/>
+   `Version: 1`<br/>
+   `Chain ID: {identity.namespace}:{identity.chainId}`<br/>
+   `Nonce: {nonce}`<br/>
+   `Issued At: {issuedAt}`
+3. Wallet signs the message off-chain.
+4. Client submits `{ identity, message, signature, nonce, issuedAt }` to `POST /l3/auth/login`.
+5. The backend validates the CAIP-10 identity, checks the nonce and issued timestamp, verifies the signature, then stores an `L3Session` and sets an `l3-session` HTTP-only cookie.
+6. Subsequent protected requests attach the cookie automatically; `POST /l3/auth/logout` clears the cookie and removes the server-side session.
 
-Tokens expire after 24h by default. When a token expires, the client should request a new one via `POST /auth/login`. `POST /auth/logout` revokes the active session immediately.
+Sessions expire after 24 hours. Nonces expire after five minutes and are single-use.
 
 ## API Endpoints
 
-| Method | Path            | Description                                    |
-| ------ | --------------- | ---------------------------------------------- |
-| GET    | `/`             | Health check                                   |
-| GET    | `/auth/message` | Returns the login statement to be signed       |
-| POST   | `/auth/login`   | Verifies wallet signature, issues JWT session  |
-| POST   | `/auth/logout`  | Revokes current session token                  |
-| GET    | `/users/me`     | Returns the authenticated user's session info  |
-| GET    | `/profiles`     | Mock profile payload                           |
-| GET    | `/positions`    | Mock positions payload                         |
-| GET    | `/activity`     | Mock recent activity                           |
+| Method | Path                | Description                                       |
+| ------ | ------------------- | ------------------------------------------------- |
+| GET    | `/`                 | Health check                                      |
+| GET    | `/auth/nonce`       | Issues a one-time nonce with the issued timestamp |
+| POST   | `/l3/auth/login`    | Verifies signature, stores session, sets cookie   |
+| POST   | `/l3/auth/logout`   | Clears the cookie and invalidates the session     |
+| GET    | `/l3/auth/session`  | Returns the active `L3Session` (requires cookie)  |
+| GET    | `/users/me`         | Returns session-derived identity and timestamps   |
+| GET    | `/profiles`         | Mock profile payload                              |
+| GET    | `/positions`        | Mock positions payload                            |
+| GET    | `/activity`         | Mock recent activity                              |
 
 All error responses follow `{ "error": string, "code"?: number }`.
 
@@ -58,7 +63,7 @@ Important auth events (login, logout, revocation, failures) are emitted with ISO
 
 ## Testing
 
-Tests simulate the L1 signature step with a mock account and run end-to-end against the in-memory server.
+Tests simulate the signature flow with a mock account and run end-to-end against the in-memory server.
 
 ```bash
 TMPDIR=$PWD/.tmp bun test

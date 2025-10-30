@@ -1,7 +1,7 @@
-import type { SessionContext } from "../../jwt/jwt.types";
+import type { SessionContext } from "../../l3-sdk/l3auth.types"
 
-export const getCurrentUser = ({ claims }: SessionContext) => ({
-  address: claims.address,
-  loginAt: claims.loginAt,
-  sessionId: claims.sessionId,
-});
+export const getCurrentUser = ({ session }: SessionContext) => ({
+  identity: session.identity,
+  issuedAt: session.issuedAt,
+  expiresAt: session.expiresAt,
+})
