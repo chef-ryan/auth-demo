@@ -56,7 +56,10 @@ export const buildApp = () => {
 
       set.headers["Set-Cookie"] = sessionCookieHeader(session.token)
 
-      return session.session
+      return {
+        ...session.session,
+        l3Session: session.token,
+      }
     },
     {
       body: t.Object({

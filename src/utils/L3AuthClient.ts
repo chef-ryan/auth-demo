@@ -2,6 +2,7 @@ import type {
   AuthIdentity,
   L3Session,
   L3AuthRequest,
+  LoginResponse,
 } from "../l3-sdk/l3auth.types"
 
 type CredentialsMode = "omit" | "same-origin" | "include"
@@ -124,7 +125,7 @@ export class L3AuthClient {
     ].join("\n")
   }
 
-  async login(params: LoginParams): Promise<L3Session> {
+  async login(params: LoginParams): Promise<LoginResponse> {
     const { message, ...rest } = params
     const payload: L3AuthRequest = {
       ...rest,
@@ -133,7 +134,17 @@ export class L3AuthClient {
         this.buildLoginMessage(params.identity, params.nonce, params.issuedAt),
     }
 
-    return this.jsonRequest("POST", "/l3/auth/login", payload)
+    const response = await this.jsonRequest<LoginResponse>(
+      "POST",
+      "/l3/auth/login",
+      payload
+    )
+
+    if (response?.l3Session) {
+      this.defaultHeaders.Authorization = `Bearer ${response.l3Session}`
+    }
+
+    return response
   }
 
   async getSession(): Promise<L3Session> {
@@ -141,7 +152,12 @@ export class L3AuthClient {
   }
 
   async logout(): Promise<LogoutResponse> {
-    return this.jsonRequest("POST", "/l3/auth/logout")
+    const response = await this.jsonRequest<LogoutResponse>(
+      "POST",
+      "/l3/auth/logout"
+    )
+    delete this.defaultHeaders.Authorization
+    return response
   }
 
   private async jsonRequest<TResponse>(

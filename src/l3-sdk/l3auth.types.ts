@@ -36,6 +36,10 @@ export type SessionContext = {
   session: L3Session
 }
 
+export type LoginResponse = L3Session & {
+  l3Session: string
+}
+
 type GetProfileFn = typeof import("../domain/users/getProfile")["getProfile"]
 
 export type L3UserProfile = Awaited<ReturnType<GetProfileFn>>

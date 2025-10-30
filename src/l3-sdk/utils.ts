@@ -1,29 +1,7 @@
-import { getAddress, verifyMessage } from "viem"
-import type { AuthIdentity, SignatureVerificationParams } from "./l3auth.types"
+import type { SignatureVerificationParams } from "./l3auth.types"
+import { L1Auth } from "./auth/L1Auth"
 
 export type { SignatureVerificationParams } from "./l3auth.types"
 
-export const verifySignature = async ({
-  identity,
-  message,
-  signature,
-}: SignatureVerificationParams) => {
-  if (identity.namespace !== "eip155") {
-    return false
-  }
-
-  if (!/^0x[a-fA-F0-9]{40}$/.test(identity.address)) {
-    return false
-  }
-
-  try {
-    const address = getAddress(identity.address)
-    return await verifyMessage({
-      address,
-      message,
-      signature: signature as `0x${string}`,
-    })
-  } catch {
-    return false
-  }
-}
+export const verifySignature = (params: SignatureVerificationParams) =>
+  L1Auth.verifySignature(params)

@@ -52,8 +52,27 @@ export class SessionManager {
   }
 
   static async requireSessionFromRequest(request: Request) {
-    const token = SessionManager.readSessionCookie(request.headers.get("cookie"))
+    const authToken = SessionManager.readAuthorizationHeader(
+      request.headers.get("authorization")
+    )
+    const cookieToken = SessionManager.readSessionCookie(
+      request.headers.get("cookie")
+    )
+    const token = authToken ?? cookieToken
     return SessionManager.verifyL3Token(token)
+  }
+
+  static readAuthorizationHeader(authHeader: string | null) {
+    if (!authHeader) return null
+
+    const trimmed = authHeader.trim()
+    if (!trimmed) return null
+
+    const [scheme, ...rest] = trimmed.split(/\s+/)
+    if (!scheme || scheme.toLowerCase() !== "bearer") return null
+
+    const token = rest.join(" ").trim()
+    return token.length > 0 ? token : null
   }
 
   static readSessionCookie(cookieHeader: string | null) {

@@ -1,27 +1,7 @@
-import type { AuthIdentity } from "../l3auth.types"
-import { L3Config } from "../l3.config"
+import { L1Auth } from "./L1Auth"
+import type { BuildLoginMessageParams } from "./L1Auth"
 
-type BuildLoginMessageParams = {
-  identity: AuthIdentity
-  nonce: string
-  issuedAt: string
-  domain: string
-}
+export type { BuildLoginMessageParams }
 
-export const buildLoginMessage = ({
-  identity,
-  nonce,
-  issuedAt,
-  domain,
-}: BuildLoginMessageParams) => {
-  const chainReference = `${identity.namespace}:${identity.chainId}`
-
-  return [
-    `${domain} wants you to sign in with your account: ${identity.account}`,
-    `domain: ${domain}`,
-    `Version: ${L3Config.AUTH_MESSAGE_VERSION}`,
-    `Chain ID: ${chainReference}`,
-    `Nonce: ${nonce}`,
-    `Issued At: ${issuedAt}`,
-  ].join("\n")
-}
+export const buildLoginMessage = (params: BuildLoginMessageParams) =>
+  L1Auth.buildLoginMessage(params)

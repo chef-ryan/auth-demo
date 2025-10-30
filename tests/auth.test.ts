@@ -1,6 +1,10 @@
 import { describe, expect, it } from "bun:test"
 import { privateKeyToAccount } from "viem/accounts"
-import type { L3Session, NonceRecord } from "../src/l3-sdk/l3auth.types"
+import type {
+  L3Session,
+  LoginResponse,
+  NonceRecord,
+} from "../src/l3-sdk/l3auth.types"
 import { buildLoginMessage } from "../src/l3-sdk/auth/buildLoginMessage"
 import { NonceManager } from "../src/l3-sdk/NonceManager"
 import { nonceStore } from "../src/l3-sdk/stores/KVStore"
@@ -108,7 +112,7 @@ const login = async () => {
     message,
   })
 
-  const { response, data } = await call<L3Session>(
+  const { response, data } = await call<LoginResponse>(
     "POST",
     "/l3/auth/login",
     {
@@ -121,8 +125,11 @@ const login = async () => {
   )
 
   expect(response.status).toBe(200)
+  expect(typeof data.l3Session).toBe("string")
+  expect(data.l3Session.length).toBeGreaterThan(0)
+  const { l3Session: token, ...session } = data
   const cookie = extractSessionCookie(response.headers.get("set-cookie"))
-  return { session: data, cookie }
+  return { session, cookie, token }
 }
 
 describe("authentication flow", () => {
@@ -270,6 +277,25 @@ describe("authentication flow", () => {
 
     const headers = new Headers({
       Cookie: cookie,
+    })
+
+    const request = new Request("http://localhost/users/me", {
+      method: "GET",
+      headers,
+    })
+
+    const response = await app.handle(request)
+    const data = (await response.json()) as CurrentUserResponse
+
+    expect(response.status).toBe(200)
+    expect(data.identity.address).toBe(buildIdentity().address)
+  })
+
+  it("accepts bearer tokens in the authorization header", async () => {
+    const { token } = await login()
+
+    const headers = new Headers({
+      Authorization: `Bearer ${token}`,
     })
 
     const request = new Request("http://localhost/users/me", {
