@@ -3,7 +3,7 @@ import type {
   L3Session,
   SessionContext,
 } from "./l3auth.types"
-import { kvStore } from "./stores/KVStore"
+import { KVStore } from "./stores/KVStore"
 import { unauthorized } from "./errors"
 import { L3Config } from "./l3.config"
 
@@ -25,17 +25,17 @@ export class SessionManager {
     }
 
     const token = SessionManager.generateToken()
-    await kvStore.set(token, session, L3Config.SESSION_TTL_SECONDS)
+    await SessionManager.store.set(token, session, L3Config.SESSION_TTL_SECONDS)
 
     return { token, session }
   }
 
   static getSession(token: string) {
-    return kvStore.get(token)
+    return SessionManager.store.get(token)
   }
 
   static invalidateSession(token: string) {
-    return kvStore.delete(token)
+    return SessionManager.store.delete(token)
   }
 
   static async verifyL3Token(token: string | null | undefined) {
@@ -100,5 +100,13 @@ export class SessionManager {
 
   private static generateToken() {
     return crypto.randomUUID().replace(/-/g, "")
+  }
+
+  private static get store() {
+    const store = KVStore.sessionStore
+    if (!store) {
+      throw new Error("Session store not initialized")
+    }
+    return store
   }
 }

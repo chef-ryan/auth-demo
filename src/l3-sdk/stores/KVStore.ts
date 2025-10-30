@@ -15,12 +15,12 @@ export class KVStore<TValue> implements KVStoreDriver<TValue> {
   static nonceStore: KVStore<NonceRecord>
 
   static async create<TValue>(
-    options: KVStoreOptions = {}
+    options: KVStoreOptions
   ): Promise<KVStore<TValue>> {
-    const {
-      redisUrl = L3Config.REDIS_URL,
-      prefix = L3Config.KV_STORE_PREFIX,
-    } = options
+    const { redisUrl = L3Config.REDIS_URL, prefix } = options
+    if (!prefix) {
+      throw new Error("KVStore prefix is required")
+    }
     if (redisUrl) {
       const redisStore = new RedisStore<TValue>(redisUrl, prefix)
       try {
@@ -50,12 +50,14 @@ export class KVStore<TValue> implements KVStoreDriver<TValue> {
   }
 }
 
-export const kvStore = await KVStore.create<L3Session>()
+const sessionStore = await KVStore.create<L3Session>({
+  prefix: L3Config.SESSION_STORE_PREFIX,
+})
 export const nonceStore = await KVStore.create<NonceRecord>({
   prefix: L3Config.NONCE_STORE_PREFIX,
 })
 
-KVStore.sessionStore = kvStore
+KVStore.sessionStore = sessionStore
 KVStore.nonceStore = nonceStore
 
 export { MemoryStore } from "./MemoryStore"

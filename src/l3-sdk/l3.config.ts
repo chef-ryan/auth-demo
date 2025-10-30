@@ -5,7 +5,7 @@ const NONCE_TTL_FALLBACK_SECONDS = 60 * 60 * 24 * 7
 const NONCE_MAX_AGE_MS = 5 * 60 * 1000
 const NONCE_STORE_PREFIX = "nonce"
 
-const KV_STORE_PREFIX = "l3:session"
+const SESSION_STORE_PREFIX = "l3:session"
 
 export const L3Config = {
   SESSION_COOKIE_NAME,
@@ -16,7 +16,7 @@ export const L3Config = {
   NONCE_MAX_AGE_MS,
   NONCE_STORE_PREFIX,
 
-  KV_STORE_PREFIX,
+  SESSION_STORE_PREFIX,
   REDIS_URL: process.env.REDIS_URL as string,
 
   AUTH_MESSAGE_VERSION: 1,

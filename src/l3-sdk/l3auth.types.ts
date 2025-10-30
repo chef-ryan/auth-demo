@@ -62,7 +62,7 @@ export type KVStoreDriver<TValue> = {
 
 export type KVStoreOptions = {
   redisUrl?: string
-  prefix?: string
+  prefix: string
 }
 
 export type NonceRecord = {
